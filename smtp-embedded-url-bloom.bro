@@ -37,7 +37,8 @@ export {
 		const url_regex = /^([a-zA-Z\-]{3,5})(:\/\/[^\/?#"'\r\n><]*)([^?#"'\r\n><]*)([^[:blank:]\r\n"'><]*|\??[^"'\r\n><]*)/ &redef;
 
 
-		global mail_links = bloomfilter_basic_init(0.00000001, 10000000) ; 
+
+		global mail_links: opaque of bloomfilter;
 	
 		global link_already_seen: set[string] &redef ; 
 		global referrer_link_already_seen: set[string] ; 
@@ -63,6 +64,7 @@ redef record connection += {
 
 event bro_init() &priority=5
 {
+	mail_links = bloomfilter_basic_init(0.00000001, 10000000) ;
         Log::create_stream(SMTPurl::Links_LOG, [$columns=Info]);
 
 } 
@@ -70,11 +72,11 @@ event bro_init() &priority=5
 
 function extract_host(name: string): string
 {
-        local split_on_slash = split(name, /\//);
+        local split_on_slash = split_string(name, /\//);
         local num_slash = |split_on_slash|;
 
 ## ash
-        return split_on_slash[3];
+        return split_on_slash[2];
 }
 
 
