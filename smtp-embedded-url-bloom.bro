@@ -79,8 +79,6 @@ function extract_host(name: string): string
         return split_on_slash[2];
 }
 
-
-
 ## Extracts URLs discovered in arbitrary text.
 function find_all_urls(s: string): string_set
     {
@@ -102,8 +100,6 @@ function find_all_urls_without_scheme(s: string): string_set
 
 	return return_urls;
 }
-
-
 
 function log_smtp_urls(c:connection, url:string)
 {
@@ -146,14 +142,16 @@ event mime_all_data(c: connection, length: count, data: string) &priority=-5
 	#if (c$smtp?$to in ignore_mails_to) return ; 
 	if (c$id$orig_h in ignore_mail_originators) return; 
 
+	
+	local from_sender = c$smtp?$from ?  c$smtp$from : c$smtp$mailfrom ; 
 
 	local mail_info:string; 
 
 	if (c$smtp?$to && c$smtp?$subject) { 
-                mail_info =  fmt ("uid=%s from=%s to=%s subject=%s", c$smtp$uid, c$smtp$from, c$smtp$to, c$smtp$subject);
+                mail_info =  fmt ("uid=%s from=%s to=%s subject=%s", c$smtp$uid, from_sender, c$smtp$to, c$smtp$subject);
         }   
         else { 
-		mail_info =  fmt ("uid=%s from=%s", c$smtp$uid, c$smtp$from);
+		mail_info =  fmt ("uid=%s from=%s", c$smtp$uid, from_sender);
         } 
 
 	local urls = find_all_urls(data) ; 
@@ -200,57 +198,15 @@ event mime_all_data(c: connection, length: count, data: string) &priority=-5
 	} 	## for  
 }
  
-
-event log_smtp(rec: Info)
-{ 
-	#print fmt ("log_smtp: INfo: %s", Info); 
-} 
-
-#event SMTP::log_mime (rec: SMTP::EntityInfo)
-#{
-##	print fmt ("log_mine Log_mime: %s", rec); 
-#} 
-
-event mime_begin_entity(c: connection) 
-{
-#print fmt ("mime_begin_entity: %s %s %s %s", c$smtp$from, c$smtp$to, c$smtp$subject, c$smtp$reply_to);
-} 
-
 event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority=-3
 { 
 	local str = HTTP::build_url_http(c$http); 
 
 	local _bf_lookup_http= bloomfilter_lookup(SMTPurl::mail_links, str); 
 
-
-
 	if ((_bf_lookup_http >0) && str !in SMTPurl::link_already_seen && ignore_file_types !in str && ignore_site_links !in str)
 	{ 		
-		#NOTICE([$note=SMTPurl::SMTP_Link_in_EMAIL_Clicked, $msg=fmt("URL %s [%s]", str, SMTPurl::mail_links[str]), $conn=c]);
-	
 		NOTICE([$note=SMTPurl::SMTP_Link_in_EMAIL_Clicked, $msg=fmt("URL %s ", str), $conn=c]);
 		add SMTPurl::link_already_seen[str] ; 
 	} 	
-	
-	if (c$http?$referrer) 
-	{ 
-
-	local ref = c$http$referrer; 
-	
-		local _bf_lookup_ref = bloomfilter_lookup(SMTPurl::mail_links, ref);		
-		#if (ref in SMTPurl::mail_links && ref !in SMTPurl::referrer_link_already_seen && ignore_file_types !in ref && ignore_site_links !in ref)
-		if ((_bf_lookup_ref > 0) && ref !in SMTPurl::referrer_link_already_seen && ignore_file_types !in ref && ignore_site_links !in ref)
-		{  
-		fmt("Added from %s", ref); 
-		} 
-	} 
-
-	## aashish: need to port to file analysis framework 
-
-#                if (c$http?$md5 && str in SMTPurl::mail_links )
-#                {
-#                	NOTICE([$note=SMTP_Linked_BINARY_Download, $msg=fmt("%s %s %s", c$id$orig_h, c$http$md5, str),
-#				$sub=c$http$md5, $conn=c, $URL=str]);
-#		} 	
-
 } 
