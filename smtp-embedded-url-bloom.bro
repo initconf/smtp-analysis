@@ -122,7 +122,7 @@ function log_smtp_urls(c:connection, url:string)
 } 
 
 
-event mime_segment_data(c: connection, length: count, data: string) &priority=-5
+event mime_all_data(c: connection, length: count, data: string) &priority=-5
 {
 
 	if(c$smtp?$mailfrom && ignore_mailfroms  in c$smtp$mailfrom)
