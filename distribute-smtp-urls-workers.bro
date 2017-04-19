@@ -28,9 +28,7 @@ redef Cluster::worker2manager_events += /Phish::w_m_smtpurls_new|Phish::w_m_url_
 @if (( Cluster::is_enabled() && Cluster::local_node_type() != Cluster::MANAGER )|| ! Cluster::is_enabled() )
 event Phish::m_w_add_url_to_bloom(link: string)
 	{
-		log_reporter(fmt("EVENT: Phish::m_w_add_url_to_bloom: link: %s", link),10); 
-
-		#log_reporter(fmt("m_w_add_url_to_bloom: adding: %s", link),0); 
+		log_reporter(fmt("EVENT: Phish::m_w_add_url_to_bloom: added to bloomfilter - link: %s", link),10); 
 		bloomfilter_add(mail_links_bloom, link);
 	} 
 @endif 
@@ -40,7 +38,6 @@ event Phish::w_m_url_click_in_bloom(link: string, c: connection)
 	{
 		
 		log_reporter(fmt("EVENT: Phish::w_m_url_click_in_bloom : link: %s", link),10); 
-		log_reporter(fmt("ON MANAGER: calling read DB: Inside w_m_bloom: %s", link),0); 
 		### extract the mail_info for the database now 
 
 		if (link !in tmp_link_cache)
@@ -54,7 +51,6 @@ event Phish::w_m_url_click_in_bloom(link: string, c: connection)
 function mail_links_expire_func(t: table[string] of mi, link: string): interval 
 	{
 		log_reporter(fmt("EVENT: function Phish::mail_links_expire_func [ worker ] : link: %s", link),10); 
-		#log_reporter(fmt("Local Expire func for %s", link),0); 
 		bloomfilter_add(mail_links_bloom, link);
 		return 0 secs ;
 	} 
@@ -68,13 +64,11 @@ function mail_links_expire_func(t: table[string] of mi, link: string): interval
 	# check if seen = 0 , we don't want to rewrite an already expired entry back 
 	# into the database 
 		
-	#log_reporter(fmt("MMMMMMMMMMMMMMMM mail_links_expire: %s, %s", link, t[link]),0); 
-
 	local seen = bloomfilter_lookup(mail_links_bloom, link);
 	
 	if  ( seen > 0 ) 
 		{ 
-			log_reporter(fmt("mail_links_expire_func: bloomed link : %s, %s",link, t[link]),0); 
+			log_reporter(fmt("mail_links_expire_func: bloomed link : %s, %s",link, t[link]),10); 
 			return 0 secs ; 
 		} 
 
@@ -86,7 +80,7 @@ function mail_links_expire_func(t: table[string] of mi, link: string): interval
 
 	if ( seen > 0) 
 	{ 
-		log_reporter(fmt("mail_links_expire_func: uninteresting_fqdns : %s, %s",link, t[link]),0); 
+		log_reporter(fmt("mail_links_expire_func: uninteresting_fqdns : %s, %s",link, t[link]),10); 
 		#return 0 secs ; 
 	} 
 
@@ -94,30 +88,23 @@ function mail_links_expire_func(t: table[string] of mi, link: string): interval
 	### no need to store https URLs either since we'd never see their clicks in HTTP 
 	if ( /^https:\/\// in link)
 	{
-		log_reporter(fmt("mail_links_expire_func: https: %s, %s",link, t[link]),0); 
+		log_reporter(fmt("mail_links_expire_func: https: %s, %s",link, t[link]),10); 
 		return 0 secs ; 
 	}  
 
 	### time to write to the database now 	
 
 	if (Phish::sql_write_mail_links_db(link, t[link]) ) 
-		{ 
-		#Phish::WRITE_LOCK = T ; 
-
-
+	{ 
 		bloomfilter_add(mail_links_bloom, link); 
 		event Phish::m_w_add_url_to_bloom(link); 
-
-		#log_reporter(fmt("URL is uninteresting so deleting from mail_links: %s, %s, %s", link, t[link], Phish::WRITE_LOCK),0); 
-		#Phish::WRITE_LOCK = F; 
-
 		return 0 secs; 
-		} 
-	else 
-		{ 
-		log_reporter(fmt("FFFFFF Failure in writing to DATABASE so keeping in the mail_links table itself : link: %s, t[link]:%s", link,t[link]),0); 
+	} 
+	else
+	{ 
+		log_reporter(fmt("Failure in writing to DATABASE so keeping in the mail_links table itself : link: %s, t[link]:%s", link,t[link]),0); 
 		return EXTEND_LINK_EXPIRE ; 
-		} 
+	} 
 
 	return EXTEND_LINK_EXPIRE ;
 
@@ -196,7 +183,6 @@ event Phish::m_w_smtpurls_add (link: string, mail_info: mi)
 
 	if (link !in mail_links ) 
 		{
-		#log_reporter(fmt("m_w_smtpurls_add: link: %s, mail_info: %s", link, mail_info),5); 
                	mail_links[link] = mail_info ;
 		} 
 	}

@@ -32,7 +32,7 @@ event Phish::sql_read_http_reputation_db(host: string)
 
 	if (host !in tmpset)
         	{
-		log_reporter(fmt("SQL READ: sql_read_http_reputation_db: %s", host),0); 
+		log_reporter(fmt("SQL READ: sql_read_http_reputation_db: %s", host),10); 
                 add tmpset[host];
 
                 Input::add_event( [
@@ -42,7 +42,7 @@ event Phish::sql_read_http_reputation_db(host: string)
                         $ev=Phish::sqlite_http_repute_db_line,
                         $want_record=T,
                         $reader=Input::READER_POSTGRESQL, 
-			$config=table(["dbname"]="bro", ["hostname"]="localhost")
+			$config=table(["conninfo"]="host=localhost dbname=bro_test password=")
                 ]);
         	}
 	} 
@@ -62,7 +62,7 @@ event Phish::sqlite_http_repute_db_line(description: Input::EventDescription, tp
 
 event Input::end_of_data(name: string, source:string)
 	{
-		log_reporter(fmt("END_OF_DATA: name:%s, source: %s", name, source),0); 
+		log_reporter(fmt("END_OF_DATA: name:%s, source: %s", name, source),10); 
 		#local query = fmt ("select * from http_fqdn where domain='%s' order by last_visited desc limit 1 ;", name); 
 		#if (/http_fqdn/ in source && query == source)
 
@@ -70,7 +70,7 @@ event Input::end_of_data(name: string, source:string)
 		{ 
 			Input::remove(name);
 			FINISHED_READING_HTTP_FQDN = T ; 
-			### log_reporter(fmt("FINISHED_READING_HTTP_FQDN: %s", FINISHED_READING_HTTP_FQDN),0);
+			### log_reporter(fmt("FINISHED_READING_HTTP_FQDN: %s", FINISHED_READING_HTTP_FQDN),10);
 			event check_db_read_status(); 
 		} 
 
@@ -93,21 +93,6 @@ event Input::end_of_data(name: string, source:string)
 
 event bro_init()
 	{
-#		Input::add_event(
-#		    [
-#		    $source=fmt("select domain, array_to_string(days_visited, ',') as days_visited, num_requests, last_visited, interesting from http_fqdn;"), 
-#		    $name="http_fqdn_event",
-#		    $fields=Phish::fqdn_rec,
-#		    $ev=sqlite_http_repute_db_line,
-#		    $want_record=T,
-#		    $reader=Input::READER_POSTGRESQL,
-#		    $config=table(["dbname"]="bro", ["hostname"]="localhost")
-#		    ]);
-
-
-#                   $source=fmt("select t1.domain, array_to_string(t1.days_visited, ',') as days_visited, t1.num_requests, t1.last_visited, t1.interesting from http_fqdn t1 JOIN (select domain, MAX(last_visited) max_last_visited from http_fqdn where domain = 'google.com' group by domain) t2 ON t1.domain = t2.domain AND t1.last_visited = t2.max_last_visited ;"),
-#                   $source=fmt("select t1.domain, array_to_string(t1.days_visited, ',') as days_visited, t1.num_requests, t1.last_visited, t1.interesting from http_fqdn t1 JOIN (select domain, MAX(last_visited) max_last_visited from http_fqdn group by domain) t2 ON t1.domain = t2.domain AND t1.last_visited = t2.max_last_visited ;"),
-
                Input::add_table(
                    [
                    $source=fmt("select t1.* from http_fqdn t1 JOIN (select domain, MAX(last_visited) max_last_visited from http_fqdn group by domain) t2 ON t1.domain = t2.domain AND t1.last_visited = t2.max_last_visited ;"),
@@ -117,7 +102,7 @@ event bro_init()
                    $want_record=T,
 		   $destination=http_fqdn, 
                    $reader=Input::READER_POSTGRESQL,
-                   $config=table(["dbname"]="bro", ["hostname"]="localhost")
+                   $config=table(["conninfo"]="host=localhost dbname=bro_test password=")
                    ]);	
 	}
 

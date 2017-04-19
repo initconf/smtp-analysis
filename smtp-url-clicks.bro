@@ -41,7 +41,7 @@ event Phish::w_m_url_click(link: string, mail_info: mi, c: connection)
 
 		if (link in mail_links)
 		{	
-			log_reporter(fmt(" link found in w_m_url_click : %s, mail_info: %s",link, mail_links[link] ),0);
+			log_reporter(fmt("EVENT:  w_m_url_click : %s, mail_info: %s",link, mail_links[link] ),10);
 			run_heuristics(link, mail_links[link], c);
 		} 
 }
@@ -66,7 +66,7 @@ function check_smtpurl_in_http( rec: HTTP::Info)
 	log_reporter(fmt("EVENT: function check_smtpurl_in_http: VARS: rec: %s", rec),10);
 
         if ( ! connection_exists(rec$id) ) {       
-		log_reporter(fmt("NNNONONONONO::::: connection_exists NOT %s", rec),0);
+		log_reporter(fmt("POTENTIAL PROBLEM: No connection_exists for %s", rec),0);
                 #return;
         }
 
@@ -74,13 +74,8 @@ function check_smtpurl_in_http( rec: HTTP::Info)
 
         local src = rec$id$orig_h ;
         local dst = rec$id$resp_h ;
-        local link = HTTP::build_url_http(rec);
-	
-        #if (link in link_already_seen) {
-        #        log_reporter(fmt("link_already_seen return"),0);
-        #        #return ;
-        #}
-
+        local link = Phish::build_url_http(rec);
+		
 	# if URL is in mail_links ie active  usual process route 
 	# else see if we can pull mail_info for this URL from the mail_links_db 
 
@@ -102,6 +97,8 @@ function check_smtpurl_in_http( rec: HTTP::Info)
                 event Phish::w_m_url_click(link, Phish::mail_links[link], c);
 		is_link_clicked = T ; 
         }
+	else 
+                log_reporter(fmt("PROBLEM: check_smtpurl_in_http Link is NOT in bloom and/or mail_links: LINK: %s", link),0);
 	
         if (is_link_clicked) {
         	add Phish::link_already_seen[link] ;
@@ -120,7 +117,7 @@ function check_smtpurl_in_http( rec: HTTP::Info)
 
 				if (track_referrer_chains) 
 				{ 
-					log_reporter(fmt("New link added because of referrer chain: link: %s, referrer: %s for %s", link, c$http$referrer, mail_links[c$http$referrer]),0);	
+					log_reporter(fmt("New link added because of referrer chain: link: %s, referrer: %s for %s", link, c$http$referrer, mail_links[c$http$referrer]),2);	
 					Phish::mail_links[link] = Phish::mail_links[c$http$referrer] ;
 
 					local new_link = T; 
@@ -155,50 +152,3 @@ function process_link_in_bloom(link: string, c: connection)
 	### log_reporter(fmt("BLOOOOOOOMED LINK CLICKED: %s", link),0); 
 	event Phish::w_m_url_click_in_bloom(link, c); 
 } 
-
-event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority = -4
-{
-	return ; 
-
-	local rec = c$http ; 
-	if ( is_orig )
-       	{
-		local link = HTTP::build_url_http(rec);
-		local seen = bloomfilter_lookup(mail_links_bloom, link);
-		if (seen >0)
-		{ 
-			event Phish::w_m_url_click_in_bloom(link, c);
-		} 
-	} 
-
-} 
-
-
-
-#event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &priority = -4
-#        {
-#        # The reply body is done so we're ready to log.
-#        if ( ! is_orig )
-#                {
-#                # If the response was an informational 1xx, we're still expecting
-#                # the real response later, so we'll continue using the same record.
-#                if ( ! (c$http?$status_code && code_in_range(c$http$status_code, 100, 199)) )
-#                        {
-#				
-#                        }
-#                }
-#        }
-#
-#event connection_state_remove(c: connection) &priority=-4
-#        {
-#        # Flush all pending but incomplete request/response pairs.
-#        if ( c?$http_state )
-#                {
-#                for ( r in c$http_state$pending )
-#                        {
-#                        # We don't use pending elements at index 0.
-#                        if ( r == 0 ) next;
-#				
-#                        }
-#                }
-#        }

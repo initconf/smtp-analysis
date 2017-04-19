@@ -15,8 +15,23 @@ export {
 	global FINISHED_READING_SMTP_FROM_EMAIL = F ;
 	global FINISHED_READING_HTTP_FQDN = F ;
 
+	global build_url_http: function(rec: HTTP::Info): string; 
 
 }
+
+
+function build_url_http(rec: HTTP::Info): string
+{
+        local uri  = rec?$uri ? rec$uri : "/<missed_request>";
+
+	uri = (uri != "/")? uri : "" ;
+
+        local host = rec?$host ? rec$host : addr_to_uri(rec$id$resp_h);
+        if ( rec$id$resp_p != 80/tcp )
+                host = fmt("%s:%s", host, rec$id$resp_p);
+        return fmt("http://%s%s", host, uri);
+}
+
 
 
 function  log_reporter(msg: string, debug: count)
@@ -29,7 +44,7 @@ function  log_reporter(msg: string, debug: count)
 
         local DEBUG = 0 ;
 
-if (DEBUG >= 5) {
+if (debug <= 5) {
                 @if ( ! Cluster::is_enabled())
                         print fmt("%s", msg);
                 @endif
@@ -213,7 +228,7 @@ export {
 	global mail_links_expire_func: function(t: table[string] of mi, link: string): interval ;
 
        	#global mail_links: table [string] of mi &create_expire=EXPIRE_INTERVAL &expire_func=mail_links_expire_func  ;
-       	global mail_links: table [string] of mi &create_expire=4 hrs  &expire_func=mail_links_expire_func  ;
+       	global mail_links: table [string] of mi &create_expire=0 secs  &expire_func=mail_links_expire_func  ;
 	
 	# bloom filter to store expire URLs 
  	global mail_links_bloom: opaque of bloomfilter ;
@@ -251,11 +266,7 @@ export {
 
 function tmp_link_cache_expire(t: table[string] of connection, link: string): interval
 	{
-
-	 log_reporter(fmt("EVENT: function tmp_link_cache_expire: link: %s, t[link]: %s", link, t[link]),10); 
-
-        #log_reporter(fmt("tmp_link_cache_expire: link: %s", link),0);
-        #run_heuristics(link, mail_links[link], t[link]);
+	log_reporter(fmt("EVENT: function tmp_link_cache_expire: link: %s, t[link]: %s", link, t[link]),10); 
         return 0 secs ;
 	}
 
@@ -275,11 +286,8 @@ function extract_host(url: string): string
         #return gsub(parts[2],/\.$/,"");
 
 	local host = "" ; 
-
         local domain_regex: pattern = /\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}\/?/ ;
-
         local domain = find_all(url, domain_regex);
-
 
         for (d in domain)
         {
@@ -321,7 +329,6 @@ function get_email_address(sender: string): string
 {
 
         log_reporter(fmt("EVENT: function get_email_address: VARS: sender: %s", sender),10);
-
 
         #email regexp: [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}
         local pat = />|<| |\"|\'|\}|\{|\(.*\)/;

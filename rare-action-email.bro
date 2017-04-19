@@ -8,7 +8,7 @@ export {
 	#const SECS_ONE_DAY=1 secs;
 @endif 
 
-	const NUM_DAYS_TO_WATCH = 5 ; 
+	const NUM_DAYS_TO_WATCH = 10 ; 
 
 	global add_to_from_email: function(sr: smtp_rec); 
 	global add_to_from_name: function(sr: smtp_rec); 
@@ -175,11 +175,8 @@ function add_to_from(rec: smtp_rec)
 	from_name = escape_string(from_name); 
 	from = escape_string(from);
 
-	if (from == "" ) 
-	{ 	
-		log_reporter(fmt("smtp-analysis ERROR: add_to_from: empty from, returning: %s", rec),0); 
-		return ; 
-	} 
+	if (from_name  == "" ) 
+		from_name = from_email ; 
 
 
 	local seen = bloomfilter_lookup(uninteresting_smtp_from, from);
@@ -305,7 +302,7 @@ function add_to_from_email(rec: smtp_rec)
 	from_name= escape_string(from_name);
 	from = escape_string(from);
 
-	if (from == "" ) 
+	if (from_name == "" ) 
 		from_name = from_email ; 
 
 	local seen = bloomfilter_lookup(uninteresting_smtp_from_email, from_email);

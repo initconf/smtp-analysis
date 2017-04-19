@@ -32,7 +32,7 @@ global POST_requests: table[string] of string;
 event http_request(c: connection, method: string, original_URI: string, unescaped_URI: string, version: string) &priority=3
     {
 
-    Phish::log_reporter(fmt("EVENT: http_request :VARS: original_URI: %s", original_URI),10); 
+    Phish::log_reporter(fmt("EVENT: http_request :VARS: original_URI: %s", original_URI),20); 
 
     # Is it a POST & one we want to look at
     if ( method == "POST"
@@ -54,7 +54,7 @@ function POST_cleanup(c: connection)
 # Process the response code from the server
 event http_reply(c: connection, version: string, code: count, reason: string)
     {
-    Phish::log_reporter(fmt("EVENT: http_reply :VARS: c: %s", c$http ),10); 
+    Phish::log_reporter(fmt("EVENT: http_reply :VARS: c: %s", c$http ),20); 
 
     if (c$uid in POST_requests && BadPOSTSuccessfulOnly)
         {
@@ -67,7 +67,7 @@ event http_reply(c: connection, version: string, code: count, reason: string)
 # Process the data posted by the client
 event http_entity_data(c: connection, is_orig: bool, length: count, data: string)
     {
-    Phish::log_reporter(fmt("EVENT: http_entity_data :VARS: c: %s", c$http ),10); 
+    Phish::log_reporter(fmt("EVENT: http_entity_data :VARS: c: %s", c$http ),20); 
 
     if (is_orig && c$uid in POST_requests)
         {
@@ -80,7 +80,7 @@ event http_entity_data(c: connection, is_orig: bool, length: count, data: string
 
 function password_complexity(data: string):bool  
 {
-    Phish::log_reporter(fmt("EVENT: password_complexity :VARS"),10); 
+    Phish::log_reporter(fmt("EVENT: password_complexity :VARS"),20); 
 
 	local dat = split_string(data,/\?/);
 	for (i in dat)
@@ -109,7 +109,7 @@ function password_complexity(data: string):bool
 event http_end_entity(c: connection, is_orig: bool)
 {
 
-	Phish::log_reporter(fmt("EVENT: http_end_entity VARS: c: %s", c$http),10); 
+	Phish::log_reporter(fmt("EVENT: http_end_entity VARS: c: %s", c$http),20); 
 
 	if (is_orig && c$uid in POST_requests)
         {
@@ -137,7 +137,7 @@ event http_end_entity(c: connection, is_orig: bool)
 event connection_end(c: connection)
     {
 
-    Phish::log_reporter(fmt("EVENT: connection_end VARS: c: %s", c$http),10); 
+    Phish::log_reporter(fmt("EVENT: connection_end VARS: c: %s", c$http),20); 
 
     POST_cleanup(c);
     }

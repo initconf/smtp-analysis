@@ -12,14 +12,10 @@ export {
 
 event bro_done()
 {
-#	for (l in http_fqdn)
-#		print fmt("%s", http_fqdn[l]); 
-
+	return ; 
 
 	for (a in AddressBook)
 		print fmt ("Addressbook: %s", a); 
-
-	return ; 
 
 	for (l in smtp_from)
 		print fmt("%s", smtp_from[l]); 
@@ -58,7 +54,6 @@ event bro_done()
 
 event log_stats()
 {
-        #print fmt("STATS: mail_links: %s", |mail_links|); 
         log_reporter(fmt("STATS: mail_links: %s, smtp_from: %s, smtp_from_name: %s, smtp_from_email: %s, http_fqdn: %s, email_recv_to_name: %s, email_recv_to_address: %s", |Phish::mail_links|, |Phish::smtp_from|, |Phish::smtp_from_name|, |Phish::smtp_from_email|, |Phish::http_fqdn|, |Phish::email_recv_to_name|, |Phish::email_recv_to_address|),0);
         schedule STATS_TIME { Phish::log_stats() };
 }
@@ -66,9 +61,6 @@ event log_stats()
 event bro_init()
 {
         schedule STATS_TIME { Phish::log_stats() };
-
-	#for(l in mail_links)
-	#	print fmt("%s - %s", l, mail_links[l]); 
 }
 
 
@@ -79,18 +71,6 @@ event reporter_error(t: time , msg: string , location: string )
 	if (/WRITER_POSTGRESQL/ in msg)
 	{
 		NOTICE([$note=Phish::WRITER_POSTGRESQL_CRASH, $msg=msg]); 
-	} 
-
-	if (/mail_links\/Log::WRITER_POSTGRESQL/ in msg)
-	{
-		#Log::disable_stream(Phish::MAIL_LINKS);
-		#Log::remove_filter(Phish::MAIL_LINKS, "default");
-		#Log::create_stream(Phish::MAIL_LINKS, [$columns=mail_links_table]);
-
-		#local filter: Log::Filter = [$name="postgres_b", $path="mail_links", $writer=Log::WRITER_POSTGRESQL, $config=table(["dbname"]="bro", ["hostname"]="localhost")];
-		#Log::add_filter(Phish::MAIL_LINKS, filter);
-
-		#log_reporter(fmt("REINITIALIZING THE LOG STREAM: %s", filter),0); 
 	} 
 
 } 

@@ -74,7 +74,8 @@ hook Notice::policy(n: Notice::Info)
 
 } ##### end of export 
 
-event Input::update_finished(name: string, source: string)                                                         
+#event Input::update_finished(name: string, source: string)                                                         
+event Input::end_of_data(name: string, source: string)                                                         
 {                                                                         
 
 	log_reporter(fmt("EVENT: Input::update_finished: VARS: name: %s, source: %s", name, source),10);
@@ -177,10 +178,3 @@ event SMTP::log_smtp (rec: SMTP::Info)
 
 }  ##### end of policy 
 
-
-#event bro_done()
-#{
-#	for (a in smtp_malicious_indicators)
-# 		print fmt ("%s", a ); 
-#	
-#}

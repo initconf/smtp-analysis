@@ -4,12 +4,13 @@ export {
 
 
 	#const SECS_ONE_DAY: interval  = 86400 secs; 
-	const SECS_ONE_DAY: interval  = 3600 secs; 
-	#const SECS_ONE_DAY: interval  = 1 secs; 
+	#const SECS_ONE_DAY: interval  = 3600 secs; 
+	const SECS_ONE_DAY: interval  = 1 secs; 
 
-	const HTTP_NUM_DAYS_TO_WATCH: count  = 5 ; 
+	#const HTTP_NUM_DAYS_TO_WATCH: count  = 10 ; 
+	const HTTP_NUM_DAYS_TO_WATCH: count  = 3 ; 
 
-	global EXPIRE_INTERVAL: interval = 4 mins &redef ; 
+	global EXPIRE_INTERVAL: interval = 1 days &redef ; 
 
 	#type fqdn_rec : record { 
 	#	days_visited: vector of time  ; 
@@ -69,12 +70,14 @@ event Phish::m_w_http_fqdn_stop (host: string)
 event Phish::w_m_http_fqdn_new(host: string, fqdn: fqdn_rec)
 {
 
-	log_reporter(fmt("EVENT: Phish::w_m_http_fqdn_new: VARS: host: %s, fqdn: %s", host, fqdn),10); 
+
 
 	local seen = bloomfilter_lookup(uninteresting_fqdns, host);
 	
 	if (seen > 0)	
 		return ; 
+	
+
 
 	if (host !in http_fqdn)
         {
@@ -98,6 +101,7 @@ event Phish::w_m_http_fqdn_new(host: string, fqdn: fqdn_rec)
 
         local n = |http_fqdn[host]$days_visited|;
 
+	log_reporter(fmt("EVENT: Phish::w_m_http_fqdn_new: VARS: host: %s, fqdn: %s, n: %s, http_fqdn[host]: %s", host, fqdn, n, http_fqdn[host]),0); 
         ### watch for 10 days
         if (n < HTTP_NUM_DAYS_TO_WATCH)
         {
@@ -165,23 +169,18 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 
 	local seen = bloomfilter_lookup(uninteresting_fqdns, host);
 
-        if (seen > 0 )
-	{ 
-		if ( host in http_fqdn)
-		{  
-			event Phish::w_m_http_fqdn_new(host, http_fqdn[host]);
-			delete http_fqdn[host] ; 
-		} 
-                return ;
-	} 
+        if (seen > 0 &&  host in http_fqdn)
+		delete http_fqdn[host] ; 
+	else if (seen > 0 ) 
+		return ; 
 
 	if (host !in http_fqdn)
 	{
 		local a: fqdn_rec; 
 		a$days_visited = vector(); 
+
 		http_fqdn[host]= a ; 
-		
-		http_fqdn[host]$days_visited[n] = rec$ts ;
+		#http_fqdn[host]$days_visited[n] = rec$ts ;
 		event Phish::w_m_http_fqdn_new(host, http_fqdn[host]);
 	} 
 	
@@ -192,7 +191,7 @@ event http_message_done(c: connection, is_orig: bool, stat: http_message_stat) &
 	####	 watch for 10 days 
 	if (n < HTTP_NUM_DAYS_TO_WATCH) 
 	{ 
-		if ( n > 0)
+		if ( n > 1)
 		{ 
 			if (network_time() - http_fqdn[host]$days_visited[n-1] > SECS_ONE_DAY  )
 			{
@@ -222,12 +221,3 @@ event http_stats (c: connection, stats: http_stats_rec)
 	if (host in http_fqdn)
 		http_fqdn[host]$num_requests += stats$num_requests ;
 } 
-
-
-event bro_done()
-{
-
-	for (a in http_fqdn)
-		print fmt ("%s  - %s", a, http_fqdn[a]); 
-
-}

@@ -56,8 +56,9 @@ event Phish::sql_read_mail_links_db(link: string)
 				$val=Val, 
 				$destination=tmp_mail_links,
 				$reader=Input::READER_POSTGRESQL,	
-				$config=table(["dbname"]="bro", ["hostname"]="localhost")
+				$config=table(["conninfo"]="host=localhost dbname=bro_test password=")
 			]);
+				#$config=table(["dbname"]="adhoc.lbl.gov", ["hostname"]="pg.lbl.gov")
 			Input::remove(md5_hash(link)); 
 		}
 	} 

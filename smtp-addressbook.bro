@@ -100,13 +100,10 @@ function check_addressbook_anomalies(rec: SMTP::Info)
 			local to_name = get_email_name(to); 
 			local to_email = get_email_address(to); 
 
-			print fmt ("TTTTTTTTOOOOOOOOOOOOOOOOOOOOOOOO %s", to); 	
-
 			if (to_email in AddressBook) 
 			{ 
 				for (e in AddressBook[to_email]$entry )
 				{
-				print fmt ("EEEEEEEEEEEEE E is %s", e); 
 				local parts = split_string(e,/,/); 
                         	local address_name = to_lower(parts[0]); 
 	                        local address_email = to_lower(parts[1]); 
@@ -227,23 +224,6 @@ event Phish::w_m_smtp_rec_new(rec: SMTP::Info) &priority=-10
 
 
 @endif 
-
-event bro_done()
-{
-	return ; 
-	print fmt (" Addressbook: "); 
-	for (a in AddressBook)
-	{ 
-		print fmt("AddressBook: %s : %s", a, AddressBook[a]); 
-	} 
-
-	print ("====================================="); 
-
-	return ; 
-	for ([f,t] in mail_handshake)
-		print fmt ("%s, %s, %s", f, t, mail_handshake[f,t]);
-
-}  
 
 event bro_init()
 {

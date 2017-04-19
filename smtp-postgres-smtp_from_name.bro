@@ -21,10 +21,8 @@ function sql_write_smtp_from_name_db(fr: from_name_rec): bool
 
 	 Phish::log_reporter(fmt("EVENT: sql_write_smtp_from_name_db: VARS: from_email_rec: %s", fr),10);
 
-	Phish::log_reporter(fmt("from_name_rec: %s", fr),0); 
-
 	if ( Cluster::local_node_type() == Cluster::MANAGER  || ! Cluster::is_enabled()) {
-		Phish::log_reporter(fmt ("FROM_REC: SQL WRITING  sql_write_smtp_from_name_db: %s", fr),0) ;
+		Phish::log_reporter(fmt ("FROM_REC: SQL WRITING  sql_write_smtp_from_name_db: %s", fr),10) ;
 		Log::write(Phish::SMTP_FROM_NAME, fr); 
 		}
 	return T ; 
@@ -35,7 +33,7 @@ event bro_init()
         Log::create_stream(Phish::SMTP_FROM_NAME, [$columns=from_name_rec]);
         #Log::remove_filter(Phish::SMTP_FROM_NAME, "default");
 
-	local filter: Log::Filter = [$name="postgres_from_name_rec", $path="smtp_from_name", $writer=Log::WRITER_POSTGRESQL, $config=table(["dbname"]="bro", ["hostname"]="localhost")];
+	local filter: Log::Filter = [$name="postgres_from_name_rec", $path="smtp_from_name", $writer=Log::WRITER_POSTGRESQL, $config=table(["conninfo"]="host=localhost dbname=bro_test password=")];
 	Log::add_filter(Phish::SMTP_FROM_NAME, filter);
 
 }
@@ -54,7 +52,7 @@ event bro_init()
 			$val=from_name_rec, 
 			$destination=smtp_from_name, 
 			$reader=Input::READER_POSTGRESQL,
-			$config=table(["dbname"]="bro", ["hostname"]="localhost")
+			$config=table(["conninfo"]="host=localhost dbname=bro_test password=")
 		]);
 
 
@@ -80,7 +78,7 @@ event Phish::sql_read_smtp_from_name_db(from_name: string)
 			$fields=from_name_rec, 
 			$ev=read_smtp_from_name, 
                         $reader=Input::READER_POSTGRESQL,
-                        $config=table(["dbname"]="bro", ["hostname"]="localhost")
+                        $config=table(["conninfo"]="host=localhost dbname=bro_test password=")
                 ]);
 	
         }
@@ -92,7 +90,7 @@ event Input::end_of_data(name: string, source:string)
 		{ 
 		Input::remove("smtp_from_name_table"); 
 		FINISHED_READING_SMTP_FROM_NAME = T ; 
-		log_reporter(fmt("FINISHED_READING_SMTP_FROM_NAME: %s", FINISHED_READING_SMTP_FROM_NAME),0);
+		log_reporter(fmt("FINISHED_READING_SMTP_FROM_NAME: %s", FINISHED_READING_SMTP_FROM_NAME),10);
 		 event check_db_read_status();
 		} 
         }

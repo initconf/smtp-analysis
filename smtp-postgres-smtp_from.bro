@@ -22,9 +22,8 @@ function sql_write_smtp_from_db(fr: from_rec): bool
 
 	local t_fr: from_rec = [$m_from=escape_string(fr$m_from), $days_sent=fr$days_sent, $email=fr$email, $emails_sent=fr$emails_sent, $emails_recv=fr$emails_recv, $num_clicks=fr$num_clicks, $trustworthy=fr$trustworthy]; 
 
-	 Phish::log_reporter(fmt("----> from_rec: %s, %s", fr, t_fr),0); 
 	if ( Cluster::local_node_type() == Cluster::MANAGER  || ! Cluster::is_enabled()) {
-		Phish::log_reporter(fmt ("FROM_REC: SQL WRITING  sql_write_smtp_from_db: %s", fr),0) ;
+		Phish::log_reporter(fmt ("FROM_REC: SQL WRITING  sql_write_smtp_from_db: %s", fr),10) ;
 		Log::write(Phish::SMTP_FROM, fr); 
 		}
 	return T ; 
@@ -36,7 +35,7 @@ event bro_init()
         Log::create_stream(Phish::SMTP_FROM, [$columns=from_rec]);
         #Log::remove_filter(Phish::SMTP_FROM, "default");
 
-	local filter: Log::Filter = [$name="postgres_from_rec", $path="smtp_from", $writer=Log::WRITER_POSTGRESQL, $config=table(["dbname"]="bro", ["hostname"]="localhost")];
+	local filter: Log::Filter = [$name="postgres_from_rec", $path="smtp_from", $writer=Log::WRITER_POSTGRESQL, $config=table(["conninfo"]="host=localhost dbname=bro_test password=")];
         Log::add_filter(Phish::SMTP_FROM, filter);
 
 }
@@ -45,9 +44,6 @@ event bro_init()
 event bro_init()
 {
 
-#			$source="select m_from, array_to_string(days_sent,',') as days_sent, array_to_string(email, ',') as email, emails_sent, emails_recv, num_clicks, trustworthy from smtp_from order by id asc", 
-#			$source="select t1.m_from, array_to_string(t1.days_sent,',') as days_sent, array_to_string(t1.email, ',') as email, t1.emails_sent, t1.emails_recv, t1.num_clicks, t1.trustworthy from smtp_from t1 JOIN (select m_from, MAX(emails_sent) as max_emails_sent from smtp_from group by m_from ) t2 ON t1.m_from = t2.m_from AND t1.emails_sent = max_emails_sent ;",
-
 	   Input::add_table( [
 			$source="select t1.* from smtp_from t1 JOIN (select m_from, MAX(emails_sent) as max_emails_sent from smtp_from group by m_from ) t2 ON t1.m_from = t2.m_from AND t1.emails_sent = max_emails_sent ;",
 			 $name="smtp_from_table",
@@ -55,13 +51,8 @@ event bro_init()
 			$val=from_rec, 
 			$destination=smtp_from, 
 			$reader=Input::READER_POSTGRESQL,
-			$config=table(["dbname"]="bro", ["hostname"]="localhost")
+			$config=table(["conninfo"]="host=localhost dbname=bro_test password=")
 		]);
-
-
-
-
-
 } 
 @endif 
 
@@ -77,7 +68,7 @@ event Input::end_of_data(name: string, source:string)
 		{ 
 		Input::remove("smtp_from_table"); 
 		FINISHED_READING_SMTP_FROM = T ; 
-		log_reporter(fmt("FINISHED_READING_SMTP_FROM: %s", FINISHED_READING_SMTP_FROM),0);
+		log_reporter(fmt("FINISHED_READING_SMTP_FROM: %s", FINISHED_READING_SMTP_FROM),10);
 		 event check_db_read_status();
 		} 
         }
